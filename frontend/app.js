@@ -1,13 +1,10 @@
-// Configuration
 const API_BASE_URL = 'http://localhost:3000/api';
-const UPDATE_INTERVAL = 3000; // Update every 3 seconds
+const UPDATE_INTERVAL = 3000; 
 const CHART_DATA_POINTS = 20; // Number of data points to show in charts
 
-// Global variables
 let tempChart, humidityChart, airQualityChart;
 let updateTimer;
 
-// Initialize charts
 function initCharts() {
     const commonOptions = {
         responsive: true,
@@ -32,7 +29,6 @@ function initCharts() {
         }
     };
 
-    // Temperature Chart
     const tempCtx = document.getElementById('tempChart').getContext('2d');
     tempChart = new Chart(tempCtx, {
         type: 'line',
@@ -62,7 +58,6 @@ function initCharts() {
         }
     });
 
-    // Humidity Chart
     const humidityCtx = document.getElementById('humidityChart').getContext('2d');
     humidityChart = new Chart(humidityCtx, {
         type: 'line',
@@ -94,7 +89,6 @@ function initCharts() {
         }
     });
 
-    // Air Quality Chart
     const airQualityCtx = document.getElementById('airQualityChart').getContext('2d');
     airQualityChart = new Chart(airQualityCtx, {
         type: 'line',
@@ -125,7 +119,6 @@ function initCharts() {
     });
 }
 
-// Update chart with new data
 function updateChart(chart, label, value) {
     if (chart.data.labels.length >= CHART_DATA_POINTS) {
         chart.data.labels.shift();
@@ -134,10 +127,9 @@ function updateChart(chart, label, value) {
     
     chart.data.labels.push(label);
     chart.data.datasets[0].data.push(value);
-    chart.update('none'); // Update without animation for smoother experience
+    chart.update('none');
 }
 
-// Fetch and display latest data
 async function fetchLatestData() {
     try {
         const response = await fetch(`${API_BASE_URL}/latest`);
@@ -146,7 +138,6 @@ async function fetchLatestData() {
         if (result.success && result.data) {
             const data = result.data;
             
-            // Update sensor values
             document.getElementById('temp-value').textContent = 
                 data.temperature !== null ? data.temperature.toFixed(1) : '--';
             
@@ -156,7 +147,6 @@ async function fetchLatestData() {
             document.getElementById('air-quality-value').textContent = 
                 data.air_quality !== null ? data.air_quality.toFixed(3) : '--';
             
-            // Update air quality alert
             const alertElement = document.getElementById('air-alert');
             if (data.air_quality !== null) {
                 if (data.air_quality > 1.9) {
@@ -170,12 +160,10 @@ async function fetchLatestData() {
                 alertElement.style.display = 'none';
             }
             
-            // Update timestamp
             const timestamp = new Date(data.timestamp);
             document.getElementById('last-update').textContent = 
                 timestamp.toLocaleString('vi-VN');
             
-            // Update charts
             const timeLabel = timestamp.toLocaleTimeString('vi-VN');
             if (data.temperature !== null) {
                 updateChart(tempChart, timeLabel, data.temperature);
@@ -187,7 +175,6 @@ async function fetchLatestData() {
                 updateChart(airQualityChart, timeLabel, data.air_quality);
             }
             
-            // Update status
             updateStatus(true);
         }
     } catch (error) {
@@ -196,7 +183,6 @@ async function fetchLatestData() {
     }
 }
 
-// Fetch and display statistics
 async function fetchStatistics() {
     try {
         const response = await fetch(`${API_BASE_URL}/statistics/24`);
@@ -226,7 +212,6 @@ async function fetchStatistics() {
     }
 }
 
-// Update connection status
 function updateStatus(connected) {
     const statusElement = document.getElementById('status');
     const statusText = document.getElementById('status-text');
@@ -240,14 +225,12 @@ function updateStatus(connected) {
     }
 }
 
-// Load initial chart data
 async function loadInitialChartData() {
     try {
         const response = await fetch(`${API_BASE_URL}/recent/${CHART_DATA_POINTS}`);
         const result = await response.json();
         
         if (result.success && result.data && result.data.length > 0) {
-            // Reverse to get chronological order
             const data = result.data.reverse();
             
             data.forEach(item => {
@@ -273,47 +256,31 @@ async function loadInitialChartData() {
     }
 }
 
-// Start auto-update
 function startAutoUpdate() {
-    // Initial fetch
     fetchLatestData();
     fetchStatistics();
     
-    // Set up periodic updates
     updateTimer = setInterval(() => {
         fetchLatestData();
     }, UPDATE_INTERVAL);
     
-    // Update statistics less frequently (every 5 minutes)
     setInterval(() => {
         fetchStatistics();
     }, 300000);
 }
 
-// Initialize application
-async function init() {
-    console.log('🚀 Initializing IoT Dashboard...');
-    
-    // Initialize charts
+async function init() {    
     initCharts();
-    
-    // Load initial data
     await loadInitialChartData();
-    
-    // Start auto-update
-    startAutoUpdate();
-    
-    console.log('✅ Dashboard ready!');
+    startAutoUpdate();    
 }
 
-// Start when DOM is loaded
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
 }
 
-// Cleanup on page unload
 window.addEventListener('beforeunload', () => {
     if (updateTimer) {
         clearInterval(updateTimer);

@@ -28,7 +28,7 @@ void setup() {
     Serial.begin(115200);
     delay(2000);
     
-    Serial.println("\n=== ESP32 IoT System Starting ===");
+    Serial.println("\n=== ESP32 System Starting ===");
     
     pinMode(BUZZER_PIN, OUTPUT);
     digitalWrite(BUZZER_PIN, LOW);
@@ -39,7 +39,6 @@ void setup() {
     setupWiFi();
     setupMQTT();
     Serial.println("=== System Ready ===\n");
-    Serial.println(WiFi.gatewayIP());  // sẽ là 192.168.137.1
 
 }
 
@@ -76,11 +75,11 @@ void setupWiFi() {
     }
     
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("\n✅ WiFi connected!");
+        Serial.println("\nWiFi connected!");
         Serial.print("IP Address: ");
         Serial.println(WiFi.localIP());
     } else {
-        Serial.println("\n❌ WiFi connection failed!");
+        Serial.println("\nWiFi connection failed!");
     }
 }
 
@@ -104,12 +103,11 @@ void reconnectMQTT() {
         }
         
         if (connected) {
-            Serial.println(" ✅ Connected!");
+            Serial.println("Connected!");
             mqttClient.publish(TOPIC_STATUS, "ESP32 Connected");
         } else {
-            Serial.print(" ❌ Failed, rc=");
+            Serial.print("Failed, rc=");
             Serial.print(mqttClient.state());
-            Serial.println(" Retrying in 5 seconds...");
             delay(5000);
         }
     }
@@ -122,14 +120,14 @@ void readSensors() {
     temperature = dht.readTemperature();
     
     if (isnan(humidity) || isnan(temperature)) {
-        Serial.println("❌ Failed to read DHT22!");
+        Serial.println("Failed to read DHT22!");
         humidity = -999;
         temperature = -999;
     } else {
-        Serial.print("🌡️  Temperature: ");
+        Serial.print("Temperature: ");
         Serial.print(temperature);
         Serial.println(" °C");
-        Serial.print("💧 Humidity: ");
+        Serial.print("Humidity: ");
         Serial.print(humidity);
         Serial.println(" %");
     }
@@ -137,17 +135,17 @@ void readSensors() {
     airQualityRaw = analogRead(MQ135_PIN);
     airQualityVoltage = airQualityRaw * (3.3 / 4095.0);
     
-    Serial.print("🌫️  Air Quality Raw: ");
+    Serial.print("Air Quality Raw: ");
     Serial.print(airQualityRaw);
     Serial.print(" | Voltage: ");
     Serial.print(airQualityVoltage, 3);
     Serial.println(" V");
     
     if (airQualityVoltage > AIR_QUALITY_THRESHOLD) {
-        Serial.println("⚠️  WARNING: Poor air quality detected!");
+        Serial.println("WARNING: Poor air quality detected!");
         airQualityAlert = true;
     } else {
-        Serial.println("✅ Air quality is good");
+        Serial.println("Air quality is good");
         airQualityAlert = false;
     }
     
@@ -159,7 +157,7 @@ void publishToMQTT() {
         return;
     }
     
-    Serial.println("\n📡 Publishing to MQTT...");
+    Serial.println("\nPublishing to MQTT...");
     
     if (temperature != -999) {
         char tempStr[8];
@@ -183,7 +181,7 @@ void publishToMQTT() {
     Serial.print("  Air Quality: ");
     Serial.println(airStr);
     
-    Serial.println("✅ MQTT publish complete\n");
+    Serial.println("MQTT publish complete\n");
 }
 
 void handleBuzzer() {

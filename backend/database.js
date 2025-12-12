@@ -5,16 +5,15 @@ class DatabaseManager {
     constructor(dbPath) {
         this.db = new sqlite3.Database(dbPath, (err) => {
             if (err) {
-                console.error('❌ Database connection error:', err);
+                console.error('Database connection error:', err);
             } else {
-                console.log('✅ Connected to SQLite database');
+                console.log('Connected to SQLite database');
             }
         });
         this.initDatabase();
     }
 
     initDatabase() {
-        // Create sensor_data table
         this.db.run(`
             CREATE TABLE IF NOT EXISTS sensor_data (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,19 +24,18 @@ class DatabaseManager {
             )
         `, (err) => {
             if (err) {
-                console.error('❌ Error creating table:', err);
+                console.error('Error creating table:', err);
             }
         });
 
-        // Create index for faster queries
         this.db.run(`
             CREATE INDEX IF NOT EXISTS idx_timestamp 
             ON sensor_data(timestamp DESC)
         `, (err) => {
             if (err) {
-                console.error('❌ Error creating index:', err);
+                console.error('Error creating index:', err);
             } else {
-                console.log('✅ Database initialized');
+                console.log('Database initialized');
             }
         });
     }
@@ -153,9 +151,9 @@ class DatabaseManager {
     close() {
         this.db.close((err) => {
             if (err) {
-                console.error('❌ Error closing database:', err);
+                console.error('Error closing database:', err);
             } else {
-                console.log('✅ Database connection closed');
+                console.log('Database connection closed');
             }
         });
     }
