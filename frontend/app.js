@@ -4,6 +4,7 @@ const CHART_DATA_POINTS = 20; // Number of data points to show in charts
 
 let tempChart, humidityChart, airQualityChart;
 let updateTimer;
+let lastDataTimestamp = null;
 
 function initCharts() {
     const commonOptions = {
@@ -137,6 +138,11 @@ async function fetchLatestData() {
         
         if (result.success && result.data) {
             const data = result.data;
+
+            if (data.timestamp === lastDataTimestamp) {
+                return;
+            }
+            lastDataTimestamp = data.timestamp;
             
             document.getElementById('temp-value').textContent = 
                 data.temperature !== null ? data.temperature.toFixed(1) : '--';

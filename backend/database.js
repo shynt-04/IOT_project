@@ -1,115 +1,133 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
 
 class DatabaseManager {
-    constructor(dbPath) {
-        this.db = new sqlite3.Database(dbPath, (err) => {
-            if (err) {
-                console.error('Database connection error:', err);
-            } else {
-                console.log('Connected to SQLite database');
-            }
-        });
-        this.initDatabase();
-    }
+  constructor(dbPath) {
+    this.db = new sqlite3.Database(dbPath, (err) => {
+      if (err) {
+        console.error("Database connection error:", err);
+      } else {
+        console.log("Connected to SQLite database");
+      }
+    });
+    this.initDatabase();
+  }
 
-    initDatabase() {
-        this.db.run(`
+  initDatabase() {
+    this.db.run(
+      `
             CREATE TABLE IF NOT EXISTS sensor_data (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 temperature REAL,
                 humidity REAL,
                 air_quality REAL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                timestamp TEXT
             )
-        `, (err) => {
-            if (err) {
-                console.error('Error creating table:', err);
-            }
-        });
+        `,
+      (err) => {
+        if (err) {
+          console.error("Error creating table:", err);
+        }
+      }
+    );
 
-        this.db.run(`
+    this.db.run(
+      `
             CREATE INDEX IF NOT EXISTS idx_timestamp 
             ON sensor_data(timestamp DESC)
-        `, (err) => {
-            if (err) {
-                console.error('Error creating index:', err);
-            } else {
-                console.log('Database initialized');
-            }
-        });
-    }
+        `,
+      (err) => {
+        if (err) {
+          console.error("Error creating index:", err);
+        } else {
+          console.log("Database initialized");
+        }
+      }
+    );
+  }
 
-    insertSensorData(temperature, humidity, airQuality) {
-        return new Promise((resolve, reject) => {
-            const stmt = this.db.prepare(`
-                INSERT INTO sensor_data (temperature, humidity, air_quality)
-                VALUES (?, ?, ?)
+  insertSensorData(temperature, humidity, airQuality, timestamp) {
+    return new Promise((resolve, reject) => {
+      const stmt = this.db.prepare(`
+                INSERT INTO sensor_data (temperature, humidity, air_quality, timestamp)
+                VALUES (?, ?, ?, ?)
             `);
-            
-            stmt.run([temperature, humidity, airQuality], function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve({ id: this.lastID, changes: this.changes });
-                }
-            });
-            
-            stmt.finalize();
-        });
-    }
 
-    getLatestData() {
-        return new Promise((resolve, reject) => {
-            this.db.get(`
+      stmt.run([temperature, humidity, airQuality, timestamp], function (err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ id: this.lastID, changes: this.changes });
+        }
+      });
+
+      stmt.finalize();
+    });
+  }
+
+  getLatestData() {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `
                 SELECT * FROM sensor_data 
                 ORDER BY timestamp DESC 
                 LIMIT 1
-            `, (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row);
-                }
-            });
-        });
-    }
+            `,
+        (err, row) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(row);
+          }
+        }
+      );
+    });
+  }
 
-    getRecentData(limit = 100) {
-        return new Promise((resolve, reject) => {
-            this.db.all(`
+  getRecentData(limit = 100) {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        `
                 SELECT * FROM sensor_data 
                 ORDER BY timestamp DESC 
                 LIMIT ?
-            `, [limit], (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows);
-                }
-            });
-        });
-    }
+            `,
+        [limit],
+        (err, rows) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(rows);
+          }
+        }
+      );
+    });
+  }
 
-    getDataByTimeRange(startTime, endTime) {
-        return new Promise((resolve, reject) => {
-            this.db.all(`
+  getDataByTimeRange(startTime, endTime) {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        `
                 SELECT * FROM sensor_data 
                 WHERE timestamp BETWEEN ? AND ?
                 ORDER BY timestamp DESC
-            `, [startTime, endTime], (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows);
-                }
-            });
-        });
-    }
+            `,
+        [startTime, endTime],
+        (err, rows) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(rows);
+          }
+        }
+      );
+    });
+  }
 
-    getStatistics(hours = 24) {
-        return new Promise((resolve, reject) => {
-            this.db.get(`
+  getStatistics(hours = 24) {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `
                 SELECT 
                     AVG(temperature) as avg_temp,
                     MIN(temperature) as min_temp,
@@ -122,41 +140,48 @@ class DatabaseManager {
                     COUNT(*) as total_records
                 FROM sensor_data
                 WHERE timestamp >= datetime('now', '-' || ? || ' hours')
-            `, [hours], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row);
-                }
-            });
-        });
-    }
+            `,
+        [hours],
+        (err, row) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(row);
+          }
+        }
+      );
+    });
+  }
 
-    deleteOldData(days = 30) {
-        return new Promise((resolve, reject) => {
-            this.db.run(`
+  deleteOldData(days = 30) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `
                 DELETE FROM sensor_data 
                 WHERE timestamp < datetime('now', '-' || ? || ' days')
-            `, [days], function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    console.log(`🗑️  Deleted ${this.changes} old records`);
-                    resolve(this.changes);
-                }
-            });
-        });
-    }
+            `,
+        [days],
+        function (err) {
+          if (err) {
+            reject(err);
+          } else {
+            console.log(`🗑️  Deleted ${this.changes} old records`);
+            resolve(this.changes);
+          }
+        }
+      );
+    });
+  }
 
-    close() {
-        this.db.close((err) => {
-            if (err) {
-                console.error('Error closing database:', err);
-            } else {
-                console.log('Database connection closed');
-            }
-        });
-    }
+  close() {
+    this.db.close((err) => {
+      if (err) {
+        console.error("Error closing database:", err);
+      } else {
+        console.log("Database connection closed");
+      }
+    });
+  }
 }
 
 module.exports = DatabaseManager;
