@@ -4,6 +4,7 @@ const cors = require("cors");
 const mqtt = require("mqtt");
 const DatabaseManager = require("./database");
 const createChatRouter = require("./chatbot/chatbot_router");
+const createVoiceRouter = require("./chatbot/voice-router");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,9 +14,22 @@ app.use(express.json());
 
 const db = new DatabaseManager(process.env.DB_FILE || "./iot_data.db");
 
+// ==================== CHATBOT & VOICE ROUTES ====================
+
 // Chatbot routes
 const chatRouter = createChatRouter(db);
 app.use("/api/chat", chatRouter);
+
+// Voice routes (TTS/STT)
+const voiceRouter = createVoiceRouter({
+  openaiApiKey: process.env.OPENAI_API_KEY,
+  googleApiKey: process.env.GOOGLE_API_KEY,
+  ttsProvider: process.env.TTS_PROVIDER || "openai", // openai hoặc google
+  sttProvider: process.env.STT_PROVIDER || "whisper",
+});
+app.use("/api/voice", voiceRouter);
+
+// ==================== MQTT CONNECTION ====================
 
 let latestData = {
   temperature: null,
@@ -189,23 +203,64 @@ app.get("/api/health", (req, res) => {
     status: "running",
     mqtt: mqttClient.connected ? "connected" : "disconnected",
     uptime: process.uptime(),
+    features: {
+      chat: true,
+      voice: {
+        tts: !!process.env.OPENAI_API_KEY || !!process.env.GOOGLE_API_KEY,
+        stt: !!process.env.OPENAI_API_KEY,
+        provider: {
+          tts: process.env.TTS_PROVIDER || "openai",
+          stt: process.env.STT_PROVIDER || "whisper",
+        },
+      },
+    },
   });
 });
 
-
+// ==================== STATIC FILES ====================
 
 app.use(express.static("../frontend"));
 
+// ==================== START SERVER ====================
+
 app.listen(PORT, () => {
-  console.log(`\nBackend Server running on http://localhost:${PORT}`);
-  console.log(`API Base URL: http://localhost:${PORT}/api`);
-  console.log(`\nAvailable endpoints:`);
-  console.log(`  GET  /api/latest          - Get latest sensor data`);
-  console.log(`  GET  /api/recent/:limit   - Get recent N records`);
+  console.log(`\n🚀 Backend Server running on http://localhost:${PORT}`);
+  console.log(`📡 API Base URL: http://localhost:${PORT}/api`);
+  console.log(`\n📋 Available endpoints:`);
+  console.log(`  GET  /api/latest            - Get latest sensor data`);
+  console.log(`  GET  /api/recent/:limit     - Get recent N records`);
   console.log(`  GET  /api/statistics/:hours - Get statistics`);
   console.log(`  GET  /api/range?start=&end= - Get data by time range`);
-  console.log(`  GET  /api/health          - Server health check`);
+  console.log(`  GET  /api/health            - Server health check`);
+  console.log(`\n💬 Chat endpoints:`);
+  console.log(`  POST /api/chat              - Send chat message`);
+  console.log(`  GET  /api/chat/history/:id  - Get chat history`);
+  console.log(`  GET  /api/chat/sessions     - Get all sessions`);
+  console.log(`\n🎤 Voice endpoints:`);
+  console.log(`  POST /api/voice/tts         - Text-to-Speech`);
+  console.log(`  POST /api/voice/stt         - Speech-to-Text`);
+  console.log(`  GET  /api/voice/voices      - Get available voices`);
+  console.log(`  GET  /api/voice/config      - Get voice config`);
+
+  // Check API keys
+  console.log(`\n🔑 API Keys Status:`);
+  console.log(
+    `  OpenAI: ${process.env.OPENAI_API_KEY ? "✅ Configured" : "❌ Not set"}`
+  );
+  console.log(
+    `  Google: ${process.env.GOOGLE_API_KEY ? "✅ Configured" : "❌ Not set"}`
+  );
+
+  if (!process.env.OPENAI_API_KEY && !process.env.GOOGLE_API_KEY) {
+    console.log(`\n⚠️  Warning: No voice API keys configured.`);
+    console.log(`   Voice features will use browser's Web Speech API only.`);
+    console.log(
+      `   Add OPENAI_API_KEY or GOOGLE_API_KEY to .env for better quality.`
+    );
+  }
 });
+
+// ==================== GRACEFUL SHUTDOWN ====================
 
 process.on("SIGINT", () => {
   console.log("\n👋 Shutting down gracefully...");

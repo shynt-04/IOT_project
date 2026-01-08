@@ -24,21 +24,66 @@ class WeatherChatbot {
       temperature: config.temperature || 0.7,
     };
 
-    // System prompt cho AI
-    this.systemPrompt = `Bạn là Weather Bot, một trợ lý thông minh chuyên về dữ liệu thời tiết từ hệ thống IoT sensor.
+    // System prompt cho AI - Đã cải thiện
+    this.systemPrompt = `Bạn là Weather Bot, trợ lý thông minh chuyên phân tích dữ liệu thời tiết từ hệ thống IoT sensor.
 
-Nhiệm vụ của bạn:
-1. Trả lời câu hỏi về nhiệt độ, độ ẩm, chất lượng không khí từ dữ liệu sensor
-2. Phân tích và đưa ra nhận xét về điều kiện thời tiết
-3. Trả lời các câu hỏi chung một cách thân thiện
+NHIỆM VỤ CHÍNH:
+1. Phân tích và báo cáo dữ liệu nhiệt độ, độ ẩm, chất lượng không khí từ sensor
+2. Đưa ra đánh giá, nhận xét chuyên môn về điều kiện môi trường
+3. Cung cấp lời khuyên thực tế, hữu ích dựa trên dữ liệu
+4. Trả lời các câu hỏi chung một cách chuyên nghiệp
 
-Quy tắc:
-- Trả lời bằng tiếng Việt (trừ khi user hỏi bằng tiếng Anh)
-- Sử dụng emoji phù hợp để làm response sinh động
-- Khi có dữ liệu sensor, hãy phân tích và đưa ra lời khuyên hữu ích
-- Nếu chất lượng không khí > 1.9V là kém, cần cảnh báo
-- Nhiệt độ thoải mái: 20-28°C, độ ẩm thoải mái: 40-60%
-- Giữ câu trả lời ngắn gọn, dễ hiểu`;
+QUY TẮC BẮT BUỘC:
+- KHÔNG sử dụng emoji, icon, sticker trong câu trả lời
+- Trả lời bằng tiếng Việt, ngắn gọn, rõ ràng, đi thẳng vào vấn đề
+- Sử dụng ngôn ngữ chuyên nghiệp nhưng dễ hiểu
+- Khi trình bày số liệu, định dạng gọn gàng và có cấu trúc
+- Luôn đưa ra lời khuyên cụ thể khi có dữ liệu bất thường
+
+TIÊU CHUẨN ĐÁNH GIÁ MÔI TRƯỜNG:
+
+Nhiệt độ:
+- Dưới 18 độ C: Lạnh, cần giữ ấm
+- 18-24 độ C: Mát mẻ, lý tưởng
+- 24-28 độ C: Ấm áp, thoải mái
+- 28-32 độ C: Nóng, cần thông gió
+- Trên 32 độ C: Rất nóng, cần làm mát
+
+Độ ẩm:
+- Dưới 30%: Quá khô, cần tăng độ ẩm
+- 30-40%: Hơi khô
+- 40-60%: Lý tưởng, thoải mái
+- 60-70%: Hơi ẩm
+- Trên 70%: Quá ẩm, cần hút ẩm hoặc thông gió
+
+Chất lượng không khí (đo bằng điện áp V):
+- Dưới 1.0V: Rất tốt
+- 1.0-1.5V: Tốt
+- 1.5-1.9V: Trung bình, chấp nhận được
+- 1.9-2.5V: Kém, cần cải thiện thông gió
+- Trên 2.5V: Xấu, cần xử lý ngay
+
+ĐỊNH DẠNG TRẢ LỜI:
+- Với câu hỏi về dữ liệu hiện tại: Báo số liệu + đánh giá + lời khuyên (nếu cần)
+- Với câu hỏi về thống kê: Tóm tắt xu hướng + nhận xét
+- Với câu hỏi chung: Trả lời trực tiếp, không vòng vo
+
+VÍ DỤ CÁCH TRẢ LỜI:
+
+Câu hỏi: "Nhiệt độ hiện tại?"
+Trả lời: "Nhiệt độ hiện tại: 28.5 độ C. Mức này hơi cao, bạn nên bật quạt hoặc điều hòa để thoải mái hơn."
+
+Câu hỏi: "Chất lượng không khí thế nào?"
+Trả lời: "Chất lượng không khí: 1.2V - Mức tốt. Không khí trong lành, phù hợp cho các hoạt động trong nhà."
+
+Câu hỏi: "Tóm tắt tình hình?"
+Trả lời: 
+"Tình hình môi trường hiện tại:
+- Nhiệt độ: 26.3 độ C (thoải mái)
+- Độ ẩm: 65% (hơi cao)
+- Không khí: 1.4V (tốt)
+
+Khuyến nghị: Độ ẩm đang cao hơn mức lý tưởng. Nên mở cửa sổ hoặc bật quạt thông gió để giảm độ ẩm."`;
 
     // Keywords để detect câu hỏi liên quan thời tiết/sensor
     this.weatherKeywords = [
@@ -66,6 +111,12 @@ Quy tắc:
       "chất lượng",
       "ô nhiễm",
       "bụi",
+      "môi trường",
+      "tình hình",
+      "tóm tắt",
+      "báo cáo",
+      "thống kê",
+      "dữ liệu",
       "air quality",
       // English
       "temperature",
@@ -88,6 +139,9 @@ Quy tắc:
       "month",
       "hour",
       "minute",
+      "report",
+      "summary",
+      "status",
     ];
 
     console.log(
@@ -116,54 +170,84 @@ Quy tắc:
         this.db.getRecentData(10),
       ]);
 
-      let context = "=== DỮ LIỆU SENSOR HIỆN TẠI ===\n";
+      let context = "=== DU LIEU SENSOR HIEN TAI ===\n";
 
       if (current) {
-        context += `\n📊 Dữ liệu mới nhất (${new Date(
-          current.timestamp
-        ).toLocaleString("vi-VN")}):\n`;
-        context += `- Nhiệt độ: ${
-          current.temperature?.toFixed(1) ?? "N/A"
-        }°C\n`;
-        context += `- Độ ẩm: ${current.humidity?.toFixed(1) ?? "N/A"}%\n`;
-        context += `- Chất lượng không khí: ${
-          current.air_quality?.toFixed(3) ?? "N/A"
+        const timestamp = current.timestamp
+          ? new Date(current.timestamp).toLocaleString("vi-VN")
+          : "Khong xac dinh";
+
+        context += `\nDU LIEU MOI NHAT (${timestamp}):\n`;
+        context += `- Nhiet do: ${
+          current.temperature?.toFixed(1) ?? "Khong co"
+        } do C\n`;
+        context += `- Do am: ${current.humidity?.toFixed(1) ?? "Khong co"}%\n`;
+        context += `- Chat luong khong khi: ${
+          current.air_quality?.toFixed(3) ?? "Khong co"
         }V`;
-        context += current.air_quality > 1.9 ? " (KÉM - cần chú ý!)" : " (TỐT)";
+
+        if (current.air_quality !== null && current.air_quality !== undefined) {
+          if (current.air_quality > 2.5) {
+            context += " (MUC XAU - can xu ly ngay)";
+          } else if (current.air_quality > 1.9) {
+            context += " (MUC KEM - can cai thien)";
+          } else if (current.air_quality > 1.5) {
+            context += " (MUC TRUNG BINH)";
+          } else if (current.air_quality > 1.0) {
+            context += " (MUC TOT)";
+          } else {
+            context += " (MUC RAT TOT)";
+          }
+        }
         context += "\n";
+      } else {
+        context += "\nKhong co du lieu sensor hien tai.\n";
       }
 
       if (statistics) {
-        context += `\n📈 Thống kê 24 giờ qua:\n`;
-        context += `- Nhiệt độ: TB ${
+        context += `\nTHONG KE 24 GIO QUA:\n`;
+        context += `- Nhiet do: Trung binh ${
           statistics.avg_temp?.toFixed(1) ?? "N/A"
-        }°C, `;
-        context += `Min ${statistics.min_temp?.toFixed(1) ?? "N/A"}°C, `;
-        context += `Max ${statistics.max_temp?.toFixed(1) ?? "N/A"}°C\n`;
-        context += `- Độ ẩm: TB ${
+        } do C, `;
+        context += `Thap nhat ${
+          statistics.min_temp?.toFixed(1) ?? "N/A"
+        } do C, `;
+        context += `Cao nhat ${
+          statistics.max_temp?.toFixed(1) ?? "N/A"
+        } do C\n`;
+        context += `- Do am: Trung binh ${
           statistics.avg_humidity?.toFixed(1) ?? "N/A"
         }%, `;
-        context += `Min ${statistics.min_humidity?.toFixed(1) ?? "N/A"}%, `;
-        context += `Max ${statistics.max_humidity?.toFixed(1) ?? "N/A"}%\n`;
-        context += `- Chất lượng KK: TB ${
-          statistics.avg_air?.toFixed(3) ?? "N/A"
+        context += `Thap nhat ${
+          statistics.min_humidity?.toFixed(1) ?? "N/A"
+        }%, `;
+        context += `Cao nhat ${
+          statistics.max_humidity?.toFixed(1) ?? "N/A"
+        }%\n`;
+        context += `- Chat luong KK: Trung binh ${
+          statistics.avg_air_quality?.toFixed(3) ?? "N/A"
         }V\n`;
+        context += `- Tong so ban ghi: ${statistics.total_records ?? 0}\n`;
       }
 
       if (recent && recent.length > 0) {
-        context += `\n📜 ${recent.length} bản ghi gần nhất:\n`;
+        context += `\n${recent.length} BAN GHI GAN NHAT:\n`;
         recent.slice(0, 5).forEach((r, i) => {
-          const time = new Date(r.timestamp).toLocaleTimeString("vi-VN");
-          context += `${i + 1}. [${time}] ${r.temperature?.toFixed(
-            1
-          )}°C | ${r.humidity?.toFixed(1)}% | ${r.air_quality?.toFixed(3)}V\n`;
+          const time = r.timestamp
+            ? new Date(r.timestamp).toLocaleTimeString("vi-VN")
+            : "N/A";
+          context += `${i + 1}. [${time}] Nhiet do: ${
+            r.temperature?.toFixed(1) ?? "N/A"
+          } do C | `;
+          context += `Do am: ${r.humidity?.toFixed(1) ?? "N/A"}% | `;
+          context += `Khong khi: ${r.air_quality?.toFixed(3) ?? "N/A"}V\n`;
         });
       }
 
       return context;
     } catch (error) {
       console.error("Error getting sensor context:", error);
-      return "Không thể lấy dữ liệu sensor.";
+      return "Loi: Khong the lay du lieu sensor.";
     }
   }
 
@@ -228,7 +312,7 @@ Quy tắc:
     if (sensorContext) {
       messages.push({
         role: "system",
-        content: `Dữ liệu sensor hiện tại để tham khảo:\n${sensorContext}`,
+        content: `Du lieu sensor hien tai de tham khao (KHONG dung emoji khi tra loi):\n${sensorContext}`,
       });
     }
 
@@ -244,6 +328,77 @@ Quy tắc:
     });
 
     return await this.callLLMApi(messages);
+  }
+
+  /**
+   * Tạo fallback response khi không có LLM
+   */
+  createFallbackResponse(data, type = "current") {
+    if (!data) {
+      return "Xin loi, khong the lay du lieu sensor luc nay. Vui long thu lai sau.";
+    }
+
+    let response = "";
+
+    if (type === "current") {
+      response = "Du lieu sensor hien tai:\n\n";
+      response += `- Nhiet do: ${data.temperature?.toFixed(1) ?? "--"} do C`;
+
+      // Đánh giá nhiệt độ
+      if (data.temperature !== null && data.temperature !== undefined) {
+        if (data.temperature < 18) {
+          response += " (lanh)";
+        } else if (data.temperature <= 28) {
+          response += " (thoai mai)";
+        } else {
+          response += " (nong)";
+        }
+      }
+      response += "\n";
+
+      response += `- Do am: ${data.humidity?.toFixed(1) ?? "--"}%`;
+
+      // Đánh giá độ ẩm
+      if (data.humidity !== null && data.humidity !== undefined) {
+        if (data.humidity < 40) {
+          response += " (kho)";
+        } else if (data.humidity <= 60) {
+          response += " (ly tuong)";
+        } else {
+          response += " (am cao)";
+        }
+      }
+      response += "\n";
+
+      response += `- Chat luong khong khi: ${
+        data.air_quality?.toFixed(3) ?? "--"
+      }V`;
+
+      // Đánh giá không khí
+      if (data.air_quality !== null && data.air_quality !== undefined) {
+        if (data.air_quality <= 1.5) {
+          response += " (tot)";
+        } else if (data.air_quality <= 1.9) {
+          response += " (trung binh)";
+        } else {
+          response += " (kem - can cai thien thong gio)";
+        }
+      }
+
+      // Thêm khuyến nghị nếu có vấn đề
+      const issues = [];
+      if (data.temperature > 30) issues.push("nhiet do cao");
+      if (data.humidity > 70) issues.push("do am cao");
+      if (data.air_quality > 1.9) issues.push("chat luong khong khi kem");
+
+      if (issues.length > 0) {
+        response += `\n\nKhuyen nghi: Can chu y ${issues.join(
+          ", "
+        )}. Nen mo cua so hoac bat quat thong gio.`;
+      }
+    }
+
+    return response;
   }
 
   /**
@@ -279,23 +434,13 @@ Quy tắc:
         try {
           // Thử trả về dữ liệu cơ bản từ DB
           const current = await this.db.getLatestData();
-          if (current) {
-            response = `⚠️ Không thể kết nối AI, đây là dữ liệu cơ bản:\n\n`;
-            response += `🌡️ Nhiệt độ: ${
-              current.temperature?.toFixed(1) ?? "--"
-            }°C\n`;
-            response += `💧 Độ ẩm: ${current.humidity?.toFixed(1) ?? "--"}%\n`;
-            response += `🌬️ Không khí: ${
-              current.air_quality?.toFixed(3) ?? "--"
-            }V`;
-          } else {
-            response = "Xin lỗi, không thể lấy dữ liệu sensor lúc này.";
-          }
+          response = this.createFallbackResponse(current, "current");
+          response = "[Che do offline] " + response;
         } catch (dbError) {
-          response = "Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.";
+          response = "Xin loi, da co loi xay ra. Vui long thu lai sau.";
         }
       } else {
-        response = `Xin lỗi, tôi đang gặp sự cố kết nối. Lỗi: ${error.message}`;
+        response = `Xin loi, toi dang gap su co ket noi. Vui long thu lai sau.`;
       }
     }
 
