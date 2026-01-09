@@ -1,10 +1,10 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define WIFI_SSID "ANM-ANVT106wifi"
-#define WIFI_PASSWORD "4B&2419o"
+#define WIFI_SSID "iPhone15"
+#define WIFI_PASSWORD "danhvinhlee"
 
-#define MQTT_BROKER "192.168.137.1"
+#define MQTT_BROKER "172.20.10.2"
 #define MQTT_PORT 1883
 #define MQTT_USER ""
 #define MQTT_PASSWORD ""
@@ -21,7 +21,7 @@
 #define BUZZER_PIN 25     
 
 #define DHT_TYPE DHT22
-#define SENSOR_READ_INTERVAL 5000  
+#define SENSOR_READ_INTERVAL 60000  
 #define MQTT_PUBLISH_INTERVAL 10000 
 
 #define AIR_QUALITY_THRESHOLD 1.9  

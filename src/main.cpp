@@ -10,12 +10,12 @@ WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
 unsigned long lastSensorRead = 0;
-unsigned long lastMqttPublish = 0;
 float temperature = 0;
 float humidity = 0;
 float airQualityVoltage = 0;
 int airQualityRaw = 0;
 bool airQualityAlert = false;
+bool firstRead = true;
 
 void setupWiFi();
 void setupMQTT();
@@ -48,15 +48,17 @@ void loop() {
     }
     mqttClient.loop();
     
+    if (firstRead) {
+        readSensors();
+        handleBuzzer();
+        lastSensorRead = millis();
+        firstRead = false;
+    }
+    
     if (millis() - lastSensorRead >= SENSOR_READ_INTERVAL) {
         lastSensorRead = millis();
         readSensors();
         handleBuzzer();
-    }
-    
-    if (millis() - lastMqttPublish >= MQTT_PUBLISH_INTERVAL) {
-        lastMqttPublish = millis();
-        publishToMQTT();
     }
 }
 
@@ -150,6 +152,8 @@ void readSensors() {
     }
     
     Serial.println("----------------------");
+    
+    publishToMQTT();
 }
 
 void publishToMQTT() {
